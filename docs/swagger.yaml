@@ -1,0 +1,290 @@
+openapi: 3.0.0
+info:
+  title: Fideiussioni API
+  description: API per la gestione delle richieste di polizze fideiussorie.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3001/api
+    description: Server di sviluppo
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+paths:
+  /users/register:
+    post:
+      summary: Registra un nuovo utente
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: user@example.com
+                password:
+                  type: string
+                  example: password123
+                role:
+                  type: string
+                  enum: [broker, client, agency, collaborator]
+                  example: client
+      responses:
+        '201':
+          description: Utente registrato con successo
+        '400':
+          description: Input non valido
+
+  /users/login:
+    post:
+      summary: Effettua il login di un utente
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: user@example.com
+                password:
+                  type: string
+                  example: password123
+      responses:
+        '200':
+          description: Login effettuato con successo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: Bearer <jwt-token>
+        '401':
+          description: Credenziali non valide
+
+  /users:
+    get:
+      summary: Recupera l'elenco di tutti gli utenti
+      tags:
+        - Users
+      security:
+        - BearerAuth: [] # Richiede autenticazione
+      responses:
+        '200':
+          description: Elenco degli utenti
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: user-id
+                    email:
+                      type: string
+                      example: user@example.com
+                    role:
+                      type: string
+                      example: client
+                    created_at:
+                      type: string
+                      format: date-time
+                      example: 2024-12-03T10:00:00Z
+        '403':
+          description: Accesso negato
+
+  /requests:
+    post:
+      summary: Crea una nuova richiesta
+      tags:
+        - Requests
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  example: user-id
+                cig:
+                  type: string
+                  example: CIG123456
+                expirationDate:
+                  type: string
+                  format: date
+                  example: 2024-12-31
+                attachments:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Richiesta creata con successo
+        '400':
+          description: Input non valido
+
+    get:
+      summary: Recupera tutte le richieste
+      tags:
+        - Requests
+      security:
+        - BearerAuth: [] # Richiede autenticazione
+      responses:
+        '200':
+          description: Elenco di tutte le richieste
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: request-id
+                    cig:
+                      type: string
+                      example: CIG123456
+                    status:
+                      type: string
+                      example: In attesa
+                    expirationDate:
+                      type: string
+                      format: date
+                      example: 2024-12-31
+
+  /requests/{requestId}:
+    get:
+      summary: Recupera una richiesta per ID
+      tags:
+        - Requests
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            example: request-id
+      security:
+        - BearerAuth: [] # Richiede autenticazione
+      responses:
+        '200':
+          description: Dettagli della richiesta
+        '404':
+          description: Richiesta non trovata
+
+    patch:
+      summary: Aggiorna lo stato di una richiesta
+      tags:
+        - Requests
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            example: request-id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [Da assegnare, In carico, Emessa - In attesa di firma del cliente, Emessa - In attesa di firma dell'agente, Completata, Rifiutata]
+                  example: Completata
+      security:
+        - BearerAuth: [] # Richiede autenticazione
+      responses:
+        '200':
+          description: Stato della richiesta aggiornato
+        '400':
+          description: Input non valido
+        '404':
+          description: Richiesta non trovata
+
+  /notifications/send:
+    post:
+      summary: Invia una notifica a un utente
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: [] # Richiede autenticazione
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  example: user-id
+                subject:
+                  type: string
+                  example: Nuova notifica
+                message:
+                  type: string
+                  example: Questo è un messaggio di notifica.
+      responses:
+        '200':
+          description: Notifica inviata con successo
+        '404':
+          description: Utente non trovato
+
+  /notifications/user/{userId}:
+    get:
+      summary: Recupera tutte le notifiche di un utente
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: [] # Richiede autenticazione
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            example: user-id
+      responses:
+        '200':
+          description: Elenco delle notifiche
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: notification-id
+                    subject:
+                      type: string
+                      example: Nuova notifica
+                    message:
+                      type: string
+                      example: Questo è un messaggio di notifica.
+                    createdAt:
+                      type: string
+                      format: date-time
+                      example: 2024-12-03T12:00:00Z
